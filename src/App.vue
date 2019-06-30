@@ -10,13 +10,20 @@
       </div>
       <div class="answer-box">
         <h2>The answer is:</h2>
-        <span class="answer">1</span>
+        <span class="answer" id="answer">1</span>
+        <div class="control-box">
+          <a href="javascript:void(0)" @click="resetDrawing" class="btn-reset">Reset</a>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock';
+
+// const disableBodyScroll = BodyScrollLock.disableBodyScroll;
+
 var draw = null;
 var color = '#c8dad3'
 var draw_history = []
@@ -25,6 +32,14 @@ export default {
   name: 'app',
   mounted(){
     draw = new Draw()
+
+    let drawing = document.getElementById('drawing-box')
+    disableBodyScroll(drawing)
+  },
+  methods: {
+    resetDrawing(){
+      draw.reset()
+    }
   }
 }
 
@@ -44,11 +59,12 @@ class Draw{
   listen(){
     this.c.addEventListener('mousedown', (event)=>{
       this.mouseDown = true
+      this.setDummyPoint()
+    })
 
-      var rect = this.c.getBoundingClientRect();
-
-      this.mouseX = (event.offsetX + rect.left) - 60
-      this.mouseY = (event.offsetY + rect.top) - 60
+    this.c.addEventListener('touchstart', (event)=>{
+      event.preventDefault()
+      this.mouseDown = true
       this.setDummyPoint()
     })
 
@@ -59,6 +75,13 @@ class Draw{
       this.mouseDown = false
     })
 
+    this.c.addEventListener('touchcancel', ()=>{
+      if(this.mouseDown){
+        this.setDummyPoint()
+      }
+      this.mouseDown = false
+    }, false)
+
     this.c.addEventListener('mouseleave', ()=>{
       if(this.mouseDown){
         this.setDummyPoint()
@@ -66,10 +89,15 @@ class Draw{
       this.mouseDown = false
     })
 
+    this.c.addEventListener('touchend', ()=>{
+      if(this.mouseDown){
+        this.setDummyPoint()
+      }
+      this.mouseDown = false
+    }, false)
+
     this.c.addEventListener('mousemove', (event)=>{
       this.mouseMove(event)
-
-      var rect = this.c.getBoundingClientRect();
 
       if(this.mouseDown){
         this.mouseX = event.offsetX
@@ -87,6 +115,29 @@ class Draw{
         this.draw(item, draw_history.length)
       }
     })
+
+    this.c.addEventListener('touchmove', (event)=>{
+      event.preventDefault()
+      console.log(event)
+
+      var rect = this.c.getBoundingClientRect();
+
+      if(this.mouseDown){
+        this.mouseX = (event.touches[0].pageX || event.changedTouches[0].pageX) - rect.left
+        this.mouseY = (event.touches[0].pageY || event.changedTouches[0].pageY) - rect.top
+
+        let item = {
+          isDummy: false,
+          x: this.mouseX,
+          y: this.mouseY,
+          c: color,
+          r: 12
+        }
+
+        draw_history.push(item)
+        this.draw(item, draw_history.length)
+      }
+    }, false)
   }
 
   createImage(){
@@ -124,6 +175,11 @@ class Draw{
     let item = this.getDummyItem()
     draw_history.push(item)
     this.draw(item, draw_history.length)
+  }
+
+  reset(){
+    draw_history = []
+    this.redraw()
   }
 
   redraw(){
@@ -182,6 +238,8 @@ class Draw{
   padding: 20px 0px;
   background: #f2f6f5;
   height: 100vh;
+  width: 100%;
+  overflow: hidden;
 }
 
 .container{
@@ -202,7 +260,7 @@ class Draw{
 
 .drawing-box{
   position: relative;
-  grid-column: auto/span 8;
+  grid-column: auto/span 6;
 }
 
 .answer-box{
@@ -245,4 +303,13 @@ canvas {
   font-size: 5em;
 }
 
+.btn-reset{
+  text-decoration: none;
+  display: inline-block;
+  padding: 5px 20px;
+  background: #c8dad3;
+  color: #63707e;
+  font-size: 1.5em;
+  border-radius: 5px;
+}
 </style>
